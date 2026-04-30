@@ -20,6 +20,39 @@
         .res-box { background: #000; border: 1px solid #00ff00; padding: 15px; border-radius: 6px; text-align: center; color: #00ff00; margin-top: 10px; font-weight: bold; font-size: 1.2em;}
         .crafted-tag { color: #3498db; font-size: 0.8em; font-weight: bold; }
         .welcome-msg { text-align: center; color: #666; font-size: 1.4em; margin-top: 200px; }
+    /* 화면 너비가 768px 이하일 때 적용 (모바일/태블릿) */
+@media (max-width: 768px) {
+    body {
+        flex-direction: column; /* 가로 배열을 세로 배열로 변경 */
+        overflow-y: auto;       /* 전체 스크롤 허용 */
+    }
+
+    .sidebar {
+        width: 100%;            /* 사이드바 너비를 꽉 차게 */
+        height: auto;           /* 높이를 콘텐츠에 맞게 */
+        border-right: none;
+        border-bottom: 1px solid #222;
+        padding: 15px;
+        box-sizing: border-box;
+    }
+
+    .main {
+        width: 100%;
+        padding: 15px;
+        box-sizing: border-box;
+    }
+
+    /* 테이블이 화면 밖으로 나가지 않도록 가로 스크롤 허용 */
+    table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    .welcome-msg {
+        margin-top: 50px;       /* 모바일에서는 메시지 위치 조정 */
+    }
+}
     </style>
 </head>
 <body>
