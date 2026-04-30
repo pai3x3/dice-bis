@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>한밤 1시즌 BiS 마스터 분석기 (Wowhead)</title>
+    <script src="https://wow.zamimg.com/js/tooltips.js"></script>
+    <script>const whTooltips = {colorLinks: true, iconSize: true, renameLinks: true};</script>
+    <style>
+        body { font-family: 'Pretendard', sans-serif; background: #0b0b0d; color: #eee; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        .sidebar { width: 340px; background: #151518; padding: 25px; border-right: 1px solid #222; display: flex; flex-direction: column; overflow-y: auto; }
+        .main { flex: 1; padding: 25px; overflow-y: auto; background: #0c0c0e; }
+        .card { background: #1c1c21; border-radius: 10px; padding: 15px; margin-bottom: 20px; border: 1px solid #333; }
+        h2 { color: #f8b700; border-bottom: 2px solid #f8b700; padding-bottom: 8px; margin-top: 0; font-size: 1.2em; }
+        select, input { width: 100%; padding: 10px; margin: 8px 0; background: #000; color: #fff; border: 1px solid #444; border-radius: 4px; box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; background: #111; table-layout: fixed; border: 1px solid #333; margin-bottom: 20px; }
+        th { background: #222; color: #f8b700; padding: 10px; text-align: center; border: 1px solid #333; font-size: 0.85em; }
+        td { padding: 10px; border: 1px solid #222; font-size: 0.85em; text-align: center; }
+        .btn { width: 100%; padding: 15px; background: #f8b700; border: none; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 5px; font-size: 1.1em; color: #000; }
+        .link-btn { display: block; text-align: center; padding: 12px; background: #333; color: #f8b700; text-decoration: none; border-radius: 6px; font-size: 0.85em; margin-bottom: 15px; border: 1px solid #444; font-weight: bold; }
+        .res-box { background: #000; border: 1px solid #00ff00; padding: 15px; border-radius: 6px; text-align: center; color: #00ff00; margin-top: 10px; font-weight: bold; font-size: 1.2em;}
+        .crafted-tag { color: #3498db; font-size: 0.8em; font-weight: bold; }
+        .welcome-msg { text-align: center; color: #666; font-size: 1.4em; margin-top: 200px; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>한밤 1시즌 주사위 확률</h2>
+        
+        <!-- 1. 확률 분석 섹션 (최상단) -->
+        <div class="card">
+            <label> 드랍 가능 아이템 수 (N)</label>
+            <input type="number" id="total" placeholder="N값을 입력하세요" min="1">
+            
+            <label>원하는 아이템 수</label>
+            <input type="number" id="target" value="1" min="1">
+            
+            <label>보유 주사위 개수 (1~3)</label>
+            <input type="number" id="dice" value="2" min="1" max="3">
+            
+            <button class="btn" onclick="calculate()">성공 확률 분석</button>
+        </div>
+    
+        <!-- 분석 결과 표시 위치 -->
+        <div id="calcResult"></div>
+    
+        <hr style="border:0.5px solid #333; margin:20px 0;">
+    
+        <!-- 2. 직업 BiS 참고 섹션 -->
+        <div class="card">
+            <p style="color: #f8b700; font-size: 0.85em; font-weight: bold; margin-bottom: 10px;">
+                직업 BiS 참고용 (선택 시 우측에 표시됨)
+            </p>
+            <label>직업 선택</label>
+            <select id="classSelect" onchange="updateSpecOptions()">
+                <option value="">-- 직업 선택 --</option>
+                <option value="WARRIOR">전사 (Warrior)</option>
+                <option value="ROGUE">도적 (Rogue)</option>
+                <option value="SHAMAN">주술사 (Shaman)</option>
+                <option value="WARLOCK">흑마법사 (Warlock)</option>
+                <option value="MAGE">마법사 (Mage)</option>
+                <option value="MONK">수도사 (Monk)</option>
+                <option value="PALADIN">성기사 (Paladin)</option>
+                <option value="PRIEST">사제 (Priest)</option>
+                <option value="HUNTER">사냥꾼 (Hunter)</option>
+                <option value="DEATHKNIGHT">죽음의 기사 (DK)</option>
+                <option value="DEMONHUNTER">악마사냥꾼 (DH)</option>
+                <option value="DRUID">드루이드 (Druid)</option>
+                <option value="EVOKER">기원사 (Evoker)</option>
+            </select>
+            
+            <label>전문화 선택</label>
+            <select id="specSelect" onchange="renderComparison()">
+                <option value="">-- 전문화 선택 --</option>
+            </select>
+        </div>
+    
+        <!-- 3. 외부 링크 및 주의사항 (맨 하단) -->
+        <div style="margin-top: auto;">
+            <a href="https://wow-loot-table.vercel.app/?c=1" target="_blank" class="link-btn">🔍 드랍테이블 확인 참고(N값)</a>
+            
+            <div class="notice" style="background: #222; padding: 12px; border-radius: 6px; border-left: 4px solid #f8b700; font-size: 0.8em; color: #ccc; line-height: 1.5;">
+                <strong style="color: #fff;">⚠️ 확인사항</strong><br>
+                해당 드랍테이블 사이트에서 레이드보스 드랍템 수는 티어토큰이 고려되지 않았으므로 수동 확인 필요
+            </div>
+        </div>
+    </div>
+    <div class="main" id="mainDisplay">
+        <div class="welcome-msg">BIS를 보려면 왼쪽에서 직업과 전문화를 선택해 주세요.</div>
+    </div>
+<script>
+    const SLOT_TEMPLATE = [
+        { key: "HEAD", label: "머리", synonyms: ["Head", "Helm", "Helmet"] },
+        { key: "NECK", label: "목", synonyms: ["Neck"] },
+        { key: "SHOULDER", label: "어깨", synonyms: ["Shoulder", "Shoulders"] },
+        { key: "BACK", label: "등", synonyms: ["Back", "Cloak", "Cape"] },
+        { key: "CHEST", label: "가슴", synonyms: ["Chest"] },
+        { key: "WRIST", label: "손목", synonyms: ["Wrist", "Bracers", "Wrists"] },
+        { key: "HANDS", label: "손", synonyms: ["Hands", "Gloves"] },
+        { key: "WAIST", label: "허리", synonyms: ["Waist", "Belt", "Belt/Waist"] },
+        { key: "LEGS", label: "다리", synonyms: ["Legs"] },
+        { key: "FEET", label: "발", synonyms: ["Feet", "Boots"] },
+        { key: "RING1", label: "반지1", synonyms: ["Ring", "Ring 1", "Ring #1", "Ring Set"] },
+        { key: "RING2", label: "반지2", synonyms: ["Ring", "Ring 2", "Ring #2", "Ring (Defensive)"] },
+        { key: "TRINKET1", label: "장신구1", synonyms: ["Trinket", "Trinket 1", "Trinket #1", "Trinket (Damage)"] },
+        { key: "TRINKET2", label: "장신구2", synonyms: ["Trinket", "Trinket 2", "Trinket #2", "Trinket (Defense)"] },
+        { key: "WEAPON1", label: "주무기", synonyms: ["Weapon", "Main Hand", "Main-hand", "Weapon (2H)", "2H Weapon", "Weapon (Two-Hand)", "Mainhand", "Sentinel Weapon", "Weapon Main-Hand", "Pack Leader Main Hand", "Weapon (Staff)", "Weapons", "Mainhand 1H Weapon", "Weapon (2h)", "Weapons (1h)", "Mainhand Weapon"] },
+        { key: "WEAPON2", label: "보조무기", synonyms: ["Offhand", "Off Hand", "Off-hand", "Shield", "Offhand Weapon", "Weapon Off-Hand", "Pack Leader Off-Hand", "Alternative Weapon", "Offhand 1H Weapon", "Weapons (Dual Wield)", "Weapon (Alt)"] }
+    ];
+
+   
+    const DATA_DB = {
+              WARRIOR: {
+            specs: { "arms": "무기 (Arms)", "fury": "분노 (Fury)", "protection": "방어 (Prot)" },
+            items: {
+                "arms": {
+                    wh: [
+                        {s:"Weapon", id:249296, src:"Midnight Falls"},
+                        {s:"Head", id:249952, src:"Tier Set"},
+                        {s:"Neck", id:249337, src:"Fallen-King Salhadaar"},
+                        {s:"Shoulders", id:249950, src:"Tier Set"},
+                        {s:"Back", id:239656, src:"Crafting/Misc"},
+                        {s:"Chest", id:249955, src:"Chimaerus"},
+                        {s:"Wrist", id:237834, src:"Crafting/Misc"},
+                        {s:"Gloves", id:251081, src:"Windrunner Spire"},
+                        {s:"Belt", id:249949, src:"Catalyst"},
+                        {s:"Legs", id:249951, src:"Tier Set"},
+                        {s:"Boots", id:249381, src:"Chimaerus"},
+                        {s:"Ring 1", id:249920, src:"Midnight Falls"},
+                        {s:"Ring 2", id:251217, src:"Nexus Point Xenas"},
+                        {s:"Trinket 1", id:249343, src:"Chimaerus"},
+                        {s:"Trinket 2", id:249342, src:"Vorasius"}
+                    ]
+                },
+                "fury": {
+                    wh: [
+                        {s:"Mainhand", id:249277, src:"Lightblinded Vanguard"},
+                        {s:"Offhand", id:237846, src:"Crafting/Misc"},
+                        {s:"Head", id:249952, src:"Tier Set"},
+                        {s:"Neck", id:250247, src:"Midnight Falls"},
+                        {s:"Shoulders", id:249950, src:"Tier Set"},
+                        {s:"Back", id:258575, src:"Skyreach"},
+                        {s:"Chest", id:249955, src:"Chimaerus"},
+                        {s:"Wrist", id:237834, src:"Crafting/Misc"},
+                        {s:"Gloves", id:151332, src:"Seat of the Triumvirate"},
+                        {s:"Belt", id:249949, src:"Catalyst"},
+                        {s:"Legs", id:249951, src:"Tier Set"},
+                        {s:"Boots", id:249954, src:"Catalyst"},
+                        {s:"Ring 1", id:249920, src:"Midnight Falls"},
+                        {s:"Ring 2", id:193708, src:"Algeth'ar Academy"},
+                        {s:"Trinket 1", id:249343, src:"Chimaerus"},
+                        {s:"Trinket 2", id:249342, src:"Vorasius"}
+                    ]
+                },
+                "protection": {
+                    wh: [
+                        {s:"Weapon", id:249295, src:"Crown of the Cosmos"},
+                        {s:"Shield", id:249921, src:"Belo'ren"},
+                        {s:"Head", id:249952, src:"Tier Set"},
+                        {s:"Neck", id:249368, src:"Crown of the Cosmos"},
+                        {s:"Shoulders", id:249950, src:"Tier Set"},
+                        {s:"Back", id:249370, src:"Vaelgor & Ezzorak"},
+                        {s:"Chest", id:249955, src:"Tier Set"},
+                        {s:"Wrist", id:249326, src:"Imperator Averzian"},
+                        {s:"Gloves", id:151332, src:"Seat of the Triumvirate"},
+                        {s:"Belt", id:249331, src:"Vaelgor & Ezzorak"},
+                        {s:"Legs", id:249951, src:"Tier Set"},
+                        {s:"Boots", id:249381, src:"Chimaerus"},
+                        {s:"Ring 1", id:249920, src:"Midnight Falls"},
+                        {s:"Ring 2", id:151311, src:"Seat of the Triumvirate"},
+                        {s:"Trinket 1", id:249343, src:"Chimaerus"},
+                        {s:"Trinket 2", id:249342, src:"Vorasius"}
+                    ]
+                }
+            }
+        },
+        ROGUE: {
+            specs: { "assassination": "암살", "outlaw": "무법", "subtlety": "잠행" },
+            items: {
+                "assassination": {
+                    wh: [
+                        {s:"Weapon", id:249925, src:"Vorasius"},
+                        {s:"Offhand", id:237837, src:"Crafted"},
+                        {s:"Head", id:250006, src:"Tier Set"},
+                        {s:"Neck", id:249337, src:"Salhadaar"},
+                        {s:"Shoulders", id:250004, src:"Tier Set"},
+                        {s:"Back", id:239656, src:"Crafted"},
+                        {s:"Chest", id:250009, src:"Tier Set"},
+                        {s:"Wrist", id:249327, src:"Raid"},
+                        {s:"Gloves", id:250007, src:"Tier Set"},
+                        {s:"Belt", id:244573, src:"Crafted"},
+                        {s:"Legs", id:251087, src:"Windrunner Spire"},
+                        {s:"Boots", id:258577, src:"Skyreach"},
+                        {s:"Ring 1", id:249919, src:"Belo'ren"},
+                        {s:"Ring 2", id:49812, src:"Pit of Saron"},
+                        {s:"Trinket 1", id:193701, src:"Algeth'ar"},
+                        {s:"Trinket 2", id:249343, src:"Chimaerus"}
+                    ]
+                },
+                "outlaw": {
+                    wh: [
+                        {s:"Weapon", id:260423, src:"Crown"},
+                        {s:"Offhand", id:133491, src:"Pit"},
+                        {s:"Head", id:151336, src:"Seat"},
+                        {s:"Neck", id:50228, src:"Pit"},
+                        {s:"Shoulders", id:250004, src:"Tier Set"},
+                        {s:"Back", id:249335, src:"Imperator"},
+                        {s:"Chest", id:250009, src:"Tier Set"},
+                        {s:"Wrist", id:50264, src:"Pit"},
+                        {s:"Gloves", id:250007, src:"Tier Set"},
+                        {s:"Belt", id:249374, src:"Chimaerus"},
+                        {s:"Legs", id:250005, src:"Tier Set"},
+                        {s:"Boots", id:244569, src:"Crafted"},
+                        {s:"Ring 1", id:249336, src:"Vorasius"},
+                        {s:"Ring 2", id:240949, src:"Crafted"},
+                        {s:"Trinket 1", id:249343, src:"Chimaerus"},
+                        {s:"Trinket 2", id:260235, src:"Belo'ren"}
+                    ]
+                },
+                "subtlety": {
+                    wh: [
+                        {s:"Weapon", id:249284, src:"Belo'ren"},
+                        {s:"Offhand", id:237837, src:"Crafted"},
+                        {s:"Head", id:250006, src:"Tier Set"},
+                        {s:"Neck", id:249368, src:"Crown"},
+                        {s:"Shoulders", id:250004, src:"Tier Set"},
+                        {s:"Back", id:258575, src:"Skyreach"},
+                        {s:"Chest", id:250009, src:"Tier Set"},
+                        {s:"Wrist", id:249327, src:"Vorasius"},
+                        {s:"Gloves", id:250007, src:"Tier Set"},
+                        {s:"Belt", id:244573, src:"Crafted"},
+                        {s:"Legs", id:251087, src:"Windrunner"},
+                        {s:"Boots", id:258577, src:"Skyreach"},
+                        {s:"Ring 1", id:249919, src:"Belo'ren"},
+                        {s:"Ring 2", id:49812, src:"Pit"},
+                        {s:"Trinket 1", id:249344, src:"Imperator"},
+                        {s:"Trinket 2", id:249343, src:"Chimaerus"}
+                    ]
+                }
+            }
+        },
+        PRIEST: {
+            specs: { "discipline": "수양", "holy": "신성", "shadow": "암흑" },
+            items: {
+                "discipline": {
+                    wh: [
+                        {s:"Helm", id:250051, src:"Raid | Catalyst | Vault"},
+                        {s:"Neck", id:249368, src:"Crown of the Cosmos (Raid)"},
+                        {s:"Shoulders", id:250049, src:"Raid | Catalyst | Vault"},
+                        {s:"Cape", id:249370, src:"Vaelgor & Ezzorak (Raid)"},
+                        {s:"Chest", id:249912, src:"Midnight Falls (Raid)"},
+                        {s:"Bracers", id:249315, src:"Vorasius(Raid)"},
+                        {s:"Gloves", id:250052, src:"Raid | Catalyst | Vault"},
+                        {s:"Belt", id:239664, src:"Crafting/Misc"},
+                        {s:"Legs", id:250050, src:"Raid | Catalyst | Vault"},
+                        {s:"Boots", id:258584, src:"Skyreach"},
+                        {s:"Ring 1", id:249920, src:"Midnight Falls (Raid)"},
+                        {s:"Ring 2", id:251093, src:"Nexus Point Xenas"},
+                        {s:"Trinket 1", id:249343, src:"Chimaerus (Raid)"},
+                        {s:"Trinket 2", id:249346, src:"Vaelgor's Final Stare (Raid)"},
+                        {s:"Weapon", id:249283, src:"Belo'ren (Raid)"},
+                        {s:"Offhand", id:245769, src:"Crafting/Misc"}
+                    ]
+                },
+                "holy": {
+                    wh: [
+                        {s:"Helm", id:250051, src:"Raid | Catalyst | Vault"},
+                        {s:"Neck", id:250247, src:"Midnight Falls (Raid)"},
+                        {s:"Shoulders", id:250049, src:"Raid | Catalyst | Vault"},
+                        {s:"Cape", id:249335, src:"Imperator Averzian (Raid)"},
+                        {s:"Chest", id:249912, src:"Midnight Falls (Raid)"},
+                        {s:"Bracers", id:250047, src:"Raid | Catalyst | Vault"},
+                        {s:"Gloves", id:250052, src:"Raid | Catalyst | Vault"},
+                        {s:"Belt", id:239664, src:"Crafting/Misc"},
+                        {s:"Legs", id:250050, src:"Raid | Catalyst | Vault"},
+                        {s:"Boots", id:249373, src:"Chimaerus"},
+                        {s:"Ring 1", id:249336, src:"Vorasius(Raid)"},
+                        {s:"Ring 2", id:249919, src:"Belo'ren (Raid)"},
+                        {s:"Trinket 1", id:249809, src:"Crown of the Cosmos (Raid)"},
+                        {s:"Trinket 2", id:249808, src:"War Chaplain Senn (Raid)"},
+                        {s:"Weapon", id:249293, src:"Imperator Averzian(Raid)"},
+                        {s:"Offhand", id:245769, src:"Crafting/Misc"}
+                    ]
+                },
+                "shadow": {
+                    wh: [
+                        {s:"Helm", id:250051, src:"Raid | Catalyst | Vault"},
+                        {s:"Neck", id:250247, src:"Midnight Falls (Raid)"},
+                        {s:"Shoulders", id:250049, src:"Raid | Catalyst | Vault"},
+                        {s:"Cape", id:249370, src:"Vaelgor & Ezzorak (Raid)"},
+                        {s:"Chest", id:250054, src:"Raid | Catalyst | Vault"},
+                        {s:"Bracers", id:251108, src:"Magister's Terrace"},
+                        {s:"Gloves", id:250052, src:"Raid | Catalyst | Vault"},
+                        {s:"Belt", id:249376, src:"Belo'ren (Raid)"},
+                        {s:"Legs", id:250050, src:"Raid | Catalyst | Vault"},
+                        {s:"Boots", id:249373, src:"Chimaerus"},
+                        {s:"Ring 1", id:249920, src:"Midnight Falls (Raid)"},
+                        {s:"Ring 2", id:249369, src:"Lightblinded Vanguard (Raid)"},
+                        {s:"Trinket 1", id:249343, src:"Chimaerus (Raid)"},
+                        {s:"Trinket 2", id:249346, src:"Vaelgor & Ezzorak (Raid)"},
+                        {s:"Weapon", id:249283, src:"Belo'ren (Raid)"},
+                        {s:"Offhand", id:249922, src:"Chimaerus (Raid)"}
+                    ]
+                }
+            }
+        },
+        HUNTER: {
+            specs: { "beast-mastery": "야수", "marksmanship": "사격", "survival": "생존" },
+            items: {
+                "beast-mastery": {
+                    wh: [
+                        {s:"Weapon", id:251174, src:"Maisara Caverns"},
+                        {s:"Head", id:249988, src:"Tier Set"},
+                        {s:"Neck", id:250247, src:"Midnight Falls"},
+                        {s:"Shoulders", id:151323, src:"Seat of the Triumvirate"},
+                        {s:"Cloak", id:258575, src:"Skyreach"},
+                        {s:"Chest", id:249991, src:"Tier Set"},
+                        {s:"Wrist", id:251209, src:"Nexus Point Xenas"},
+                        {s:"Gloves", id:249989, src:"Tier Set"},
+                        {s:"Belt", id:244611, src:"Crafting"},
+                        {s:"Legs", id:249987, src:"Tier Set"},
+                        {s:"Boots", id:244610, src:"Crafting"},
+                        {s:"Ring 1", id:249920, src:"Midnight Falls"},
+                        {s:"Ring 2", id:249369, src:"Lightblinded Vanguard"},
+                        {s:"Trinket 1", id:249343, src:"Chimaerus"},
+                        {s:"Trinket 2", id:193701, src:"Algeth'ar Academy"}
+                    ]
+                },
+                "marksmanship": {
+                    wh: [
+                        {s:"Weapon", id:249288, src:"Crown of the Cosmos"},
+                        {s:"Head", id:249988, src:"Tier Set"},
+                        {s:"Neck", id:250247, src:"Midnight Falls"},
+                        {s:"Shoulders", id:151323, src:"Seat of the Triumvirate"},
+                        {s:"Cloak", id:249335, src:"Imperator Averzian"},
+                        {s:"Chest", id:249991, src:"Tier Set"},
+                        {s:"Wrist", id:249304, src:"Fallen-King Salhadaar"},
+                        {s:"Gloves", id:249989, src:"Tier Set"},
+                        {s:"Belt", id:244611, src:"Crafting"},
+                        {s:"Legs", id:249987, src:"Tier Set"},
+                        {s:"Boots", id:244610, src:"Crafting"},
+                        {s:"Ring 1", id:249919, src:"Belo'ren"},
+                        {s:"Ring 2", id:249336, src:"Vorasius"},
+                        {s:"Trinket 1", id:193701, src:"Algeth'ar Academy"},
+                        {s:"Trinket 2", id:260235, src:"Belo'ren"}
+                    ]
+                },
+                "survival": {
+                    wh: [
+                        {s:"2H Weapon", id:251077, src:"Windrunner Spire"},
+                        {s:"Main Hand", id:249284, src:"Belo'ren"},
+                        {s:"Off Hand", id:237837, src:"Crafted"},
+                        {s:"Head", id:249988, src:"Tier Set"},
+                        {s:"Neck", id:250247, src:"Midnight Falls"},
+                        {s:"Shoulders", id:249318, src:"Vaelgor"},
+                        {s:"Cloak", id:239656, src:"Crafted"},
+                        {s:"Chest", id:249991, src:"Tier Set"},
+                        {s:"Wrist", id:249984, src:"Tier Set"},
+                        {s:"Gloves", id:249989, src:"Tier Set"},
+                        {s:"Belt", id:249371, src:"Chimaerus"},
+                        {s:"Legs", id:249987, src:"Tier Set"},
+                        {s:"Boots", id:251084, src:"Windrunner Spire"},
+                        {s:"Ring 1", id:251093, src:"Nexus Point Xenas"},
+                        {s:"Ring 2", id:249920, src:"Midnight Falls"},
+                        {s:"Trinket 1", id:193701, src:"Algeth'ar Academy"},
+                        {s:"Trinket 2", id:249343, src:"Chimaerus"}
+                    ]
+                }
+            }
+        },
+        MAGE: {
+            specs: { "arcane": "비전", "fire": "화염", "frost": "냉기" },
+            items: {
+                "arcane": {
+                    wh: [
+                        {s:"Head", id:250060, src:"Tier Set"},
+                        {s:"Neck", id:250247, src:"Midnight Falls"},
+                        {s:"Shoulders", id:250058, src:"Tier Set"},
+                        {s:"Back", id:239661, src:"Crafted"},
+                        {s:"Chest", id:250063, src:"Tier Set"},
+                        {s:"Wrist", id:239660, src:"Crafted"},
+                        {s:"Gloves", id:250061, src:"Tier Set"},
+                        {s:"Belt", id:249376, src:"Belo'ren"},
+                        {s:"Legs", id:251090, src:"Windrunner Spire"},
+                        {s:"Boots", id:249373, src:"Chimaerus"},
+                        {s:"Ring 1", id:249919, src:"Belo'ren"},
+                        {s:"Ring 2", id:249920, src:"Midnight Falls"},
+                        {s:"Trinket 1", id:249346, src:"Vaelgor & Ezzorak"},
+                        {s:"Trinket 2", id:249343, src:"Chimaerus"},
+                        {s:"Weapon", id:258218, src:"Skyreach"},
+                        {s:"Offhand", id:251094, src:"Windrunner Spire"}
+                    ]
+                },
+                "fire": {
+                    wh: [
+                        {s:"Head", id:250060, src:"Tier Set"},
+                        {s:"Neck", id:250247, src:"Midnight Falls"},
+                        {s:"Shoulders", id:250058, src:"Tier Set"},
+                        {s:"Cloak", id:239656, src:"Crafted"},
+                        {s:"Chest", id:249912, src:"Midnight Falls"},
+                        {s:"Wrist", id:239648, src:"Crafted"},
+                        {s:"Gloves", id:250061, src:"Tier Set"},
+                        {s:"Belt", id:249376, src:"Belo'ren"},
+                        {s:"Legs", id:250059, src:"Tier Set"},
+                        {s:"Boots", id:258584, src:"Skyreach"},
+                        {s:"Ring 1", id:249920, src:"Midnight Falls"},
+                        {s:"Ring 2", id:249369, src:"Lightblinded Vanguard"},
+                        {s:"Trinket 1", id:250144, src:"Windrunner Spire"},
+                        {s:"Trinket 2", id:249809, src:"Crown"},
+                        {s:"Weapon", id:249286, src:"Midnight Falls"}
+                    ]
+                },
+                "frost": {
+                    wh: [
+                        {s:"Head", id:250060, src:"Tier Set"},
+                        {s:"Neck", id:250247, src:"Midnight Falls"},
+                        {s:"Shoulders", id:251085, src:"Windrunner Spire"},
+                        {s:"Cloak", id:258575, src:"Skyreach"},
+                        {s:"Chest", id:250063, src:"Tier Set"},
+                        {s:"Wrist", id:239648, src:"Crafted"},
+                        {s:"Gloves", id:250061, src:"Tier Set"},
+                        {s:"Belt", id:250057, src:"Catalyst"},
+                        {s:"Legs", id:250059, src:"Tier Set"},
+                        {s:"Boots", id:249373, src:"Chimaerus"},
+                        {s:"Ring 1", id:249920, src:"Midnight Falls"},
+                        {s:"Ring 2", id:249919, src:"Belo'ren"},
+                        {s:"Trinket 1", id:249343, src:"Chimaerus"},
+                        {s:"Trinket 2", id:249346, src:"Vaelgor & Ezzorak"},
+                        {s:"Weapon", id:258218, src:"Skyreach"},
+                        {s:"Offhand", id:245769, src:"Crafted"}
+                    ]
+                }
+            }
+        },
+        DEMONHUNTER: {
+            specs: { "devourer": "포식 (Devourer)", "havoc": "파멸 (Havoc)", "vengeance": "복수 (Vengeance)" },
+            items: {
+                "devourer": {
+                    wh: [
+                        {s:"Weapon", id:260408, src:"Midnight Falls"}, 
+                        {s:"Offhand", id:237840, src:"Crafting"}, 
+                        {s:"Head", id:250033, src:"Tier Set"}, 
+                        {s:"Neck", id:249368, src:"Crown of the Cosmos"}, 
+                        {s:"Shoulders", id:250031, src:"Tier Set"}, 
+                        {s:"Cloak", id:249370, src:"Vaelgor & Ezzorak"}, 
+                        {s:"Chest", id:250036, src:"Tier Set"}, 
+                        {s:"Wrist", id:193714, src:"Algeth'ar Academy"}, 
+                        {s:"Gloves", id:250034, src:"Tier Set"}, 
+                        {s:"Belt", id:244573, src:"Crafting"}, 
+                        {s:"Legs", id:49817, src:"Pit of Saron"}, 
+                        {s:"Boots", id:250035, src:"Catalyst"}, 
+                        {s:"Ring 1", id:249369, src:"Lightblinded Vanguard"}, 
+                        {s:"Ring 2", id:249920, src:"Midnight Falls"}, 
+                        {s:"Trinket 1", id:249343, src:"Chimaerus"}, 
+                        {s:"Trinket 2", id:249346, src:"Vaelgor & Ezzorak"}
+                    ]
+                },
+                "havoc": {
+                    wh: [
+                        {s:"Weapon", id:260408, src:"Midnight Falls"}, 
+                        {s:"Offhand", id:249280, src:"Vaelgor & Ezzorak"}, 
+                        {s:"Head", id:251109, src:"Magister's Terrace"}, 
+                        {s:"Neck", id:250247, src:"Midnight Falls"}, 
+                        {s:"Shoulders", id:250031, src:"Tier Set"}, 
+                        {s:"Cloak", id:239656, src:"Crafting/Misc"}, 
+                        {s:"Chest", id:250036, src:"Tier Set"}, 
+                        {s:"Wrist", id:244576, src:"Crafting/Misc"}, 
+                        {s:"Gloves", id:250034, src:"Tier Set"}, 
+                        {s:"Belt", id:251082, src:"Windrunner Spire"}, 
+                        {s:"Legs", id:250032, src:"Tier Set"}, 
+                        {s:"Boots", id:258577, src:"Skyreach"}, 
+                        {s:"Ring 1", id:249919, src:"Belo'ren"}, 
+                        {s:"Ring 2", id:193708, src:"Algeth'ar Academy"}, 
+                        {s:"Trinket 1", id:193701, src:"Algeth'ar Academy"}, 
+                        {s:"Trinket 2", id:249343, src:"Chimaerus"}
+                    ]
+                },
+                "vengeance": {
+                    wh: [
+                        {s:"Weapon", id:260408, src:"Midnight Falls"}, 
+                        {s:"Offhand", id:249298, src:"Raid"}, 
+                        {s:"Head", id:250033, src:"Raid"}, 
+                        {s:"Neck", id:151309, src:"Seat of the Triumvirate"}, 
+                        {s:"Shoulders", id:250031, src:"Raid"}, 
+                        {s:"Cloak", id:239656, src:"Crafted"}, 
+                        {s:"Chest", id:151313, src:"Seat of the Triumvirate"}, 
+                        {s:"Wrist", id:50264, src:"Pit of Saron"}, 
+                        {s:"Gloves", id:250034, src:"Raid"}, 
+                        {s:"Belt", id:49806, src:"Pit of Saron"}, 
+                        {s:"Legs", id:250032, src:"Raid"}, 
+                        {s:"Boots", id:251210, src:"Nexus Point Xenas"}, 
+                        {s:"Ring 1", id:251093, src:"Nexus Point Xenas"}, 
+                        {s:"Ring 2", id:249920, src:"Midnight Falls"}, 
+                        {s:"Trinket 1", id:249343, src:"Chimaerus"}, 
+                        {s:"Trinket 2", id:249344, src:"Imperator Averzian"}
+                    ]
+                }
+            }
+        },
+    SHAMAN: {
+            specs: { "elemental": "정기", "enhancement": "고양", "restoration": "복원" },
+            items: {
+                "elemental": {
+                    wh: [
+                        {s:"Head", id:249979, src:"Tier Set"},
+                        {s:"Neck", id:250247, src:"Midnight Falls"},
+                        {s:"Shoulders", id:249977, src:"Tier Set"},
+                        {s:"Cloak", id:249974, src:"Catalyst"},
+                        {s:"Chest", id:249982, src:"Tier Set"},
+                        {s:"Wrist", id:249304, src:"Salhadaar"},
+                        {s:"Gloves", id:249980, src:"Tier Set"},
+                        {s:"Belt", id:244611, src:"Crafted"},
+                        {s:"Legs", id:251215, src:"Nexus Point"},
+                        {s:"Boots", id:244610, src:"Crafted"},
+                        {s:"Ring 1", id:193708, src:"Algeth'ar"},
+                        {s:"Ring 2", id:249919, src:"Belo'ren"},
+                        {s:"Trinket 1", id:249343, src:"Chimaerus"},
+                        {s:"Trinket 2", id:250144, src:"Windrunner"},
+                        {s:"Weapon", id:251083, src:"Windrunner Spire"},
+                        {s:"Offhand", id:251105, src:"Magister"}
+                    ]
+                },
+                "enhancement": {
+                    wh: [
+                        {s:"Main Hand", id:249287, src:"Vaelgor"},
+                        {s:"Off Hand", id:237850, src:"Crafted"},
+                        {s:"Head", id:249979, src:"Tier Set"},
+                        {s:"Neck", id:250247, src:"Midnight Falls"},
+                        {s:"Shoulders", id:249977, src:"Tier Set"},
+                        {s:"Cloak", id:239656, src:"Crafted"},
+                        {s:"Chest", id:249982, src:"Tier Set"},
+                        {s:"Wrist", id:249304, src:"Salhadaar"},
+                        {s:"Gloves", id:249980, src:"Tier Set"},
+                        {s:"Belt", id:249976, src:"Catalyst"},
+                        {s:"Legs", id:249324, src:"Belo'ren"},
+                        {s:"Boots", id:251084, src:"Windrunner"},
+                        {s:"Ring 1", id:249920, src:"Midnight Falls"},
+                        {s:"Ring 2", id:251093, src:"Nexus Point"},
+                        {s:"Trinket 1", id:249343, src:"Chimaerus"},
+                        {s:"Trinket 2", id:193701, src:"Algeth'ar"}
+                    ]
+                },
+                "restoration": {
+                    wh: [
+                        {s:"Weapon", id:249293, src:"Imperator"},
+                        {s:"Offhand", id:249921, src:"Belo'ren"},
+                        {s:"Head", id:249914, src:"Midnight Falls"},
+                        {s:"Neck", id:249337, src:"Salhadaar"},
+                        {s:"Shoulders", id:249977, src:"Tier Set"},
+                        {s:"Cape", id:249974, src:"Catalyst"},
+                        {s:"Chest", id:249982, src:"Tier Set"},
+                        {s:"Wrist", id:249975, src:"Catalyst"},
+                        {s:"Gloves", id:249980, src:"Tier Set"},
+                        {s:"Belt", id:249303, src:"Lightblinded"},
+                        {s:"Legs", id:249978, src:"Tier Set"},
+                        {s:"Boots", id:249320, src:"Imperator"},
+                        {s:"Ring 1", id:249919, src:"Belo'ren"},
+                        {s:"Ring 2", id:193708, src:"Algeth'ar"},
+                        {s:"Trinket 1", id:249811, src:"Midnight Falls"},
+                        {s:"Trinket 2", id:249809, src:"Crown"}
+                    ]
+                }
+            }
+        },
+        WARLOCK: {
+            specs: { "affliction": "고통", "demonology": "악마", "destruction": "파괴" },
+            items: {
+                "affliction": {
+                    wh: [
+                        {s:"Head", id:250042, src:"Tier Set"},
+                        {s:"Neck", id:249368, src:"Crown"},
+                        {s:"Shoulders", id:251085, src:"Windrunner"},
+                        {s:"Cloak", id:239656, src:"Crafted"},
+                        {s:"Chest", id:250045, src:"Tier Set"},
+                        {s:"Wrist", id:239648, src:"Crafted"},
+                        {s:"Gloves", id:250043, src:"Tier Set"},
+                        {s:"Belt", id:249376, src:"Belo'ren"},
+                        {s:"Legs", id:250041, src:"Tier Set"},
+                        {s:"Boots", id:249305, src:"Vaelgor"},
+                        {s:"Ring 1", id:249920, src:"Midnight Falls"},
+                        {s:"Ring 2", id:251217, src:"Nexus Point"},
+                        {s:"Trinket 1", id:249343, src:"Chimaerus"},
+                        {s:"Trinket 2", id:250144, src:"Windrunner"},
+                        {s:"Weapon", id:249283, src:"Belo'ren"},
+                        {s:"Offhand", id:249276, src:"Vorasius"}
+                    ]
+                },
+                "demonology": {
+                    wh: [
+                        {s:"Head", id:250042, src:"Tier Set"},
+                        {s:"Weapon", id:258047, src:"Skyreach"},
+                        {s:"Boots", id:249373, src:"Chimaerus"},
+                        {s:"Ring 2", id:249336, src:"Vorasius"}
+                    ]
+                },
+                "destruction": {
+                    wh: [
+                        {s:"Head", id:250042, src:"Tier Set"},
+                        {s:"Weapon", id:249283, src:"Belo'ren"},
+                        {s:"Trinket 2", id:249346, src:"Vaelgor"}
+                    ]
+                }
+            }
+        },
+        EVOKER: {
+            specs: { "augmentation": "증강 (Aug)", "devastation": "황폐 (Dev)", "preservation": "보존 (Pres)" },
+            items: {
+                "augmentation": {
+                    wh: [
+                        {s:"Weapon", id:251178, src:"Maisara Caverns"},
+                        {s:"Offhand", id:249276, src:"Vorasius"},
+                        {s:"Head", id:133506, src:"Pit of Saron"},
+                        {s:"Neck", id:249337, src:"Fallen-King Salhadaar"},
+                        {s:"Shoulders", id:249995, src:"Tier Set"},
+                        {s:"Cloak", id:239656, src:"Crafting"},
+                        {s:"Chest", id:250000, src:"Tier Set"},
+                        {s:"Wrist", id:244584, src:"Crafting"},
+                        {s:"Gloves", id:249998, src:"Tier Set"},
+                        {s:"Belt", id:49810, src:"Pit of Saron"},
+                        {s:"Legs", id:249996, src:"Tier Set"},
+                        {s:"Boots", id:249999, src:"The Catalyst"},
+                        {s:"Ring 1", id:249920, src:"Midnight Falls"},
+                        {s:"Ring 2", id:49812, src:"Pit of Saron"},
+                        {s:"Trinket 1", id:249810, src:"Midnight Falls"},
+                        {s:"Trinket 2", id:250223, src:"Maisara Caverns"}
+                    ]
+                },
+                "devastation": {
+                    wh: [
+                        {s:"Weapon", id:249283, src:"Belo'ren"},
+                        {s:"Offhand", id:249276, src:"Vorasius"},
+                        {s:"Head", id:249997, src:"Tier Set"},
+                        {s:"Neck", id:250247, src:"Midnight Falls"},
+                        {s:"Shoulders", id:249995, src:"Tier Set"},
+                        {s:"Cloak", id:239656, src:"Crafting"},
+                        {s:"Chest", id:250000, src:"Tier Set"},
+                        {s:"Wrist", id:244584, src:"Crafting"},
+                        {s:"Gloves", id:249325, src:"Crown of the Cosmos"},
+                        {s:"Belt", id:49810, src:"Pit of Saron"},
+                        {s:"Legs", id:249996, src:"Tier Set"},
+                        {s:"Boots", id:249377, src:"Belo'ren"},
+                        {s:"Ring 1", id:249919, src:"Belo'ren"},
+                        {s:"Ring 2", id:249920, src:"Midnight Falls"},
+                        {s:"Trinket 1", id:249346, src:"Vaelgor & Ezzorak"},
+                        {s:"Trinket 2", id:249809, src:"Crown of the Cosmos"}
+                    ]
+                },
+                "preservation": {
+                    wh: [
+                        {s:"Helm", id:249914, src:"Midnight Falls (Raid)"},
+                        {s:"Neck", id:250247, src:"Midnight Falls (Raid)"},
+                        {s:"Shoulders", id:249995, src:"Raid | Catalyst | Vault"},
+                        {s:"Cape", id:251206, src:"Nexus Point Xenas"},
+                        {s:"Chest", id:250000, src:"Raid | Catalyst | Vault"},
+                        {s:"Bracers", id:251079, src:"Windrunner Spire"},
+                        {s:"Gloves", id:249998, src:"Raid | Catalyst | Vault"},
+                        {s:"Belt", id:193722, src:"Algeth'ar Academy"},
+                        {s:"Legs", id:249996, src:"Raid | Catalyst | Vault"},
+                        {s:"Boots", id:251084, src:"Windrunner Spire"},
+                        {s:"Ring 1", id:249369, src:"Lightblinded Vanguard (Raid)"},
+                        {s:"Ring 2", id:249920, src:"Midnight Falls (Raid)"},
+                        {s:"Trinket 1", id:249343, src:"Chimaerus (Raid)"},
+                        {s:"Trinket 2", id:249809, src:"Crown of the Cosmos (Raid)"},
+                        {s:"2h Weapon", id:258514, src:"Seat of the Triumvirate"}
+                    ]
+                }
+            }
+        },
+        PALADIN: {
+            specs: { "holy": "신성 (Holy)", "protection": "보호 (Prot)", "retribution": "징벌 (Ret)" },
+            items: {
+                "holy": {
+                    wh: [
+                        {s:"Weapon", id:193710, src:"Algeth'ar Academy"},
+                        {s:"Shield", id:258049, src:"Skyreach"},
+                        {s:"Head", id:249961, src:"Lightblinded Vanguard"},
+                        {s:"Neck", id:250247, src:"Midnight Falls"},
+                        {s:"Shoulders", id:249959, src:"Fallen-King Salhadaar"},
+                        {s:"Cloak", id:258575, src:"Skyreach"},
+                        {s:"Chest", id:249964, src:"Chimaerus"},
+                        {s:"Wrist", id:263193, src:"Maisara Caverns"},
+                        {s:"Gloves", id:249962, src:"Vorasius"},
+                        {s:"Belt", id:249331, src:"Vaelgor & Ezzorak"},
+                        {s:"Legs", id:249915, src:"Midnight Falls"},
+                        {s:"Boots", id:249332, src:"Vorasius"},
+                        {s:"Ring 1", id:249920, src:"Midnight Falls"},
+                        {s:"Ring 2", id:249919, src:"Belo'ren"},
+                        {s:"Trinket 1", id:249809, src:"Crown of the Cosmos"},
+                        {s:"Trinket 2", id:249343, src:"Chimaerus"}
+                    ]
+                },
+                "protection": {
+                    wh: [
+                        {s:"Weapon", id:249295, src:"Crown of the Cosmos"},
+                        {s:"Offhand", id:249921, src:"Belo'ren"},
+                        {s:"Head", id:249961, src:"Tier Set"},
+                        {s:"Neck", id:249368, src:"Crown of the Cosmos"},
+                        {s:"Shoulders", id:249959, src:"Tier Set"},
+                        {s:"Cloak", id:249370, src:"Vaelgor & Ezzorak"},
+                        {s:"Chest", id:249964, src:"Tier Set"},
+                        {s:"Wrist", id:249326, src:"Imperator Averzian"},
+                        {s:"Gloves", id:151332, src:"Seat of the Triumvirate"},
+                        {s:"Belt", id:249331, src:"Vaelgor & Ezzorak"},
+                        {s:"Legs", id:249960, src:"Tier Set"},
+                        {s:"Boots", id:249381, src:"Chimaerus"},
+                        {s:"Ring 1", id:249920, src:"Midnight Falls"},
+                        {s:"Ring 2", id:151311, src:"Seat of the Triumvirate"},
+                        {s:"Trinket 1", id:249343, src:"Chimaerus"},
+                        {s:"Trinket 2", id:249342, src:"Heart of Ancient Hunger"}
+                    ]
+                },
+                "retribution": {
+                    wh: [
+                        {s:"Weapon", id:249277, src:"Bellamy's Final Judgement"},
+                        {s:"Head", id:249961, src:"Tier Set"},
+                        {s:"Neck", id:250247, src:"Midnight Falls"},
+                        {s:"Shoulders", id:249959, src:"Tier Set"},
+                        {s:"Cloak", id:239656, src:"Crafting/Misc"},
+                        {s:"Chest", id:249964, src:"Tier Set"},
+                        {s:"Wrist", id:237834, src:"Crafting/Misc"},
+                        {s:"Gloves", id:151332, src:"Seat of the Triumvirate"},
+                        {s:"Belt", id:249380, src:"Crown of the Cosmos"},
+                        {s:"Legs", id:249960, src:"Tier Set"},
+                        {s:"Boots", id:249381, src:"Chimaerus"},
+                        {s:"Ring 1", id:249919, src:"Belo'ren"},
+                        {s:"Ring 2", id:249920, src:"Midnight Falls"},
+                        {s:"Trinket 1", id:260235, src:"Umbral Plume"},
+                        {s:"Trinket 2", id:193701, src:"Algeth'ar Academy"}
+                    ]
+                }
+            }
+        },
+        DEATHKNIGHT: {
+            specs: { "blood": "혈기 (Blood)", "frost": "냉기 (Frost)", "unholy": "부정 (Unholy)" },
+            items: {
+                "blood": {
+                    wh: [
+                        {s:"Weapon", id:49802, src:"Pit of Saron"},
+                        {s:"Head", id:249970, src:"Tier Set"},
+                        {s:"Neck", id:249368, src:"Crown of the Cosmos"},
+                        {s:"Shoulders", id:249968, src:"Tier Set"},
+                        {s:"Cloak", id:260312, src:"Magister's Terrace"},
+                        {s:"Chest", id:249973, src:"Tier Set"},
+                        {s:"Wrist", id:237834, src:"Crafting"},
+                        {s:"Gloves", id:151332, src:"Seat of the Triumvirate"},
+                        {s:"Belt", id:49808, src:"Pit of Saron"},
+                        {s:"Legs", id:249969, src:"Tier Set"},
+                        {s:"Boots", id:249381, src:"Chimaerus"},
+                        {s:"Ring 1", id:249920, src:"Midnight Falls"},
+                        {s:"Ring 2", id:251513, src:"Crafting"},
+                        {s:"Trinket 1", id:249343, src:"Chimaerus"},
+                        {s:"Trinket 2", id:249344, src:"Imperator Averzian"}
+                    ]
+                },
+                "frost": {
+                    wh: [
+                        {s:"Weapon (2H)", id:249277, src:"Lightblinded Vanguard"},
+                        {s:"Weapon (1H)", id:249281, src:"Fallen-King Salhadaar"},
+                        {s:"Head", id:249970, src:"Tier Set"},
+                        {s:"Neck", id:250247, src:"Midnight Falls"},
+                        {s:"Shoulders", id:50234, src:"Pit of Saron"},
+                        {s:"Cloak", id:239656, src:"Crafting/Misc"},
+                        {s:"Chest", id:249973, src:"Tier Set"},
+                        {s:"Wrist", id:237834, src:"Crafting/Misc"},
+                        {s:"Gloves", id:249971, src:"Tier Set"},
+                        {s:"Belt", id:249380, src:"Crown of the Cosmos"},
+                        {s:"Legs", id:249969, src:"Tier Set"},
+                        {s:"Boots", id:249381, src:"Chimaerus"},
+                        {s:"Ring 1", id:193708, src:"Algeth'ar Academy"},
+                        {s:"Ring 2", id:249919, src:"Belo'ren"},
+                        {s:"Trinket 1", id:249344, src:"Imperator Averzian"},
+                        {s:"Trinket 2", id:249343, src:"Chimaerus"}
+                    ]
+                },
+                "unholy": {
+                    wh: [
+                        {s:"Weapon", id:249277, src:"Lightblinded Vanguard"},
+                        {s:"Head", id:249970, src:"Tier Set"},
+                        {s:"Neck", id:250247, src:"Midnight Falls"},
+                        {s:"Shoulders", id:50234, src:"Pit of Saron"},
+                        {s:"Cloak", id:239656, src:"Crafting"},
+                        {s:"Chest", id:249973, src:"Tier Set"},
+                        {s:"Wrist", id:237834, src:"Crafting"},
+                        {s:"Gloves", id:249971, src:"Tier Set"},
+                        {s:"Belt", id:249967, src:"Catalyst"},
+                        {s:"Legs", id:249969, src:"Tier Set"},
+                        {s:"Boots", id:249381, src:"Chimaerus"},
+                        {s:"Ring 1", id:193708, src:"Algeth'ar Academy"},
+                        {s:"Ring 2", id:249919, src:"Belo'ren"},
+                        {s:"Trinket 1", id:249343, src:"Chimaerus"},
+                        {s:"Trinket 2", id:249344, src:"Imperator Averzian"}
+                    ]
+                }
+            }
+        },
+        
+        DRUID: {
+            specs: { "balance": "조화 (Balance)", "feral": "야성 (Feral)", "guardian": "수호 (Guardian)", "restoration": "회복 (Restoration)" },
+            items: {
+                "balance": {
+                    wh: [
+                        {s:"Weapon", id:251111, src:"Magister's Terrace"},
+                        {s:"Offhand", id:245769, src:"Crafting"},
+                        {s:"Head", id:250024, src:"Tier Set"},
+                        {s:"Neck", id:250247, src:"Midnight Falls"},
+                        {s:"Shoulders", id:250022, src:"Tier Set"},
+                        {s:"Cloak", id:249370, src:"Vaelgor & Ezzorak"},
+                        {s:"Chest", id:250027, src:"Tier Set"},
+                        {s:"Wrist", id:244576, src:"Crafting"},
+                        {s:"Gloves", id:251113, src:"Magister's Terrace"},
+                        {s:"Belt", id:251082, src:"Windrunner Spire"},
+                        {s:"Legs", id:250023, src:"Tier Set"},
+                        {s:"Boots", id:249382, src:"Crown of the Cosmos"},
+                        {s:"Ring 1", id:251093, src:"Nexus-Point Xenas"},
+                        {s:"Ring 2", id:251217, src:"Nexus-Point Xenas"},
+                        {s:"Trinket 1", id:249346, src:"Vaelgor & Ezzorak"},
+                        {s:"Trinket 2", id:249343, src:"The Dreamrift"}
+                    ]
+                },
+                "feral": {
+                    wh: [
+                        {s:"Weapon", id:249302, src:"Vorasius"},
+                        {s:"Head", id:250024, src:"Tier Set"},
+                        {s:"Neck", id:250247, src:"Midnight Falls"},
+                        {s:"Shoulders", id:250022, src:"Tier Set"},
+                        {s:"Cloak", id:249370, src:"Vaelgor & Ezzorak"},
+                        {s:"Chest", id:250027, src:"Tier Set"},
+                        {s:"Wrist", id:244576, src:"Crafting/Misc"},
+                        {s:"Gloves", id:244575, src:"Crafting/Misc"},
+                        {s:"Belt", id:251082, src:"Windrunner Spire"},
+                        {s:"Legs", id:250023, src:"Tier Set"},
+                        {s:"Boots", id:249382, src:"Crown of the Cosmos"},
+                        {s:"Ring 1", id:249920, src:"Midnight Falls"},
+                        {s:"Ring 2", id:251115, src:"Magister's Terrace"},
+                        {s:"Trinket 1", id:193701, src:"Algeth'ar Academy"},
+                        {s:"Trinket 2", id:249806, src:"Belo'ren"}
+                    ]
+                },
+                "guardian": {
+                    wh: [
+                        {s:"Weapon", id:249278, src:"Chimaerus"},
+                        {s:"Head", id:249913, src:"Midnight Falls"},
+                        {s:"Neck", id:249368, src:"Crown of the Cosmos"},
+                        {s:"Shoulders", id:250022, src:"Tier Set"},
+                        {s:"Cloak", id:249370, src:"Vaelgor & Ezzorak"},
+                        {s:"Chest", id:250027, src:"Tier Set"},
+                        {s:"Wrist", id:249327, src:"Vorasius"},
+                        {s:"Gloves", id:250025, src:"Tier Set"},
+                        {s:"Belt", id:249374, src:"Chimaerus"},
+                        {s:"Legs", id:250023, src:"Tier Set"},
+                        {s:"Boots", id:249334, src:"Imperator Averzian"},
+                        {s:"Ring 1", id:251093, src:"Nexus Point Xenas"},
+                        {s:"Ring 2", id:249920, src:"Midnight Falls"},
+                        {s:"Trinket 1", id:249343, src:"Chimaerus"},
+                        {s:"Trinket 2", id:193701, src:"Algeth'ar Academy"}
+                    ]
+                },
+                "restoration": {
+                    wh: [
+                        {s:"Head", id:250024, src:"Raid | Catalyst | Vault"},
+                        {s:"Neck", id:250247, src:"Midnight Falls (Raid)"},
+                        {s:"Shoulders", id:250022, src:"Raid | Catalyst | Vault"},
+                        {s:"Cape", id:249370, src:"Vaelgor & Ezzorak (Raid)"},
+                        {s:"Chest", id:251216, src:"Nexus Point Xenas"},
+                        {s:"Bracers", id:193714, src:"Algeth'ar Academy"},
+                        {s:"Gloves", id:250025, src:"Raid | Catalyst | Vault"},
+                        {s:"Belt", id:249314, src:"Fallen-King Salhadaar (Raid)"},
+                        {s:"Legs", id:250023, src:"Raid | Catalyst | Vault"},
+                        {s:"Boots", id:251210, src:"Nexus Point Xenas"},
+                        {s:"Ring 1", id:249920, src:"Midnight Falls (Raid)"},
+                        {s:"Ring 2", id:251115, src:"Magister's Terrace"},
+                        {s:"Trinket 1", id:249809, src:"Crown of the Cosmos (Raid)"},
+                        {s:"Trinket 2", id:249346, src:"Vaelgor & Ezzorak (Raid)"},
+                        {s:"1h Weapon", id:249283, src:"Belo'ren (Raid)"},
+                        {s:"Offhand", id:249922, src:"Chimaerus (Raid)"}
+                    ]
+                }
+            }
+        },
+        MONK: {
+            specs: { "brewmaster": "양조 (Brew)", "mistweaver": "운무 (Mist)", "windwalker": "풍운 (Wind)" },
+            items: {
+                "brewmaster": {
+                    wh: [
+                        {s:"Weapon (2h)", id:249302, src:"Vorasius"},
+                        {s:"Weapons (1h)", id:251207, src:"Nexus Point Xenas/Maisara Caverns"},
+                        {s:"Head", id:250015, src:"Catalyst|Raid|Vault"},
+                        {s:"Neck", id:240950, src:"Crafting"},
+                        {s:"Shoulders", id:250013, src:"Catalyst|Raid|Vault"},
+                        {s:"Cloak", id:249335, src:"Imperator Averzian"},
+                        {s:"Chest", id:250018, src:"Catalyst|Raid|Vault"},
+                        {s:"Wrist", id:250011, src:"Catalyst"},
+                        {s:"Gloves", id:250016, src:"Catalyst|Raid|Vault"},
+                        {s:"Belt", id:251082, src:"Windrunner Spire"},
+                        {s:"Legs", id:151314, src:"Seat of the Triumvirate"},
+                        {s:"Boots", id:151317, src:"Seat of the Triumvirate"},
+                        {s:"Ring 1", id:249336, src:"Vorasius"},
+                        {s:"Ring 2", id:251513, src:"Crafting"},
+                        {s:"Trinket (Damage)", id:249806, src:"Belo'ren"},
+                        {s:"Trinket (Defense)", id:249339, src:"Vaelgor & Ezzorak"}
+                    ]
+                },
+                "mistweaver": {
+                    wh: [
+                        {s:"Weapon", id:258050, src:"Skyreach"},
+                        {s:"Offhand", id:249276, src:"Vorasius (Raid)"},
+                        {s:"Head", id:250015, src:"Catalyst via"},
+                        {s:"Neck", id:50228, src:"Pit of Saron"},
+                        {s:"Shoulders", id:249333, src:"Lightblinded Vanguard (Raid)"},
+                        {s:"Cape", id:260312, src:"Magister's Terrace"},
+                        {s:"Chest", id:250018, src:"Raid | Catalyst | Vault"},
+                        {s:"Bracers", id:249327, src:"Vorasius (Raid)"},
+                        {s:"Gloves", id:250016, src:"Raid | Catalyst | Vault"},
+                        {s:"Belt", id:249374, src:"Chimaerus (Raid)"},
+                        {s:"Legs", id:250014, src:"Raid | Catalyst | Vault"},
+                        {s:"Boots", id:250017, src:"Catalyst"},
+                        {s:"Ring", id:249920, src:"Midnight Falls (Raid)"},
+                        {s:"Trinket", id:249808, src:"Lightblinded Vanguard (Raid)"}
+                    ]
+                },
+                "windwalker": {
+                    wh: [
+                        {s:"Head", id:250015, src:"Tier Set"},
+                        {s:"Neck", id:250247, src:"Midnight Falls"},
+                        {s:"Shoulder", id:250013, src:"Tier Set"},
+                        {s:"Cloak", id:250010, src:"The Catalyst"},
+                        {s:"Chest", id:250018, src:"Tier Set"},
+                        {s:"Wrist", id:249327, src:"Vorasius"},
+                        {s:"Hands", id:249321, src:"Vaelgor & Ezzorak"},
+                        {s:"Belt", id:251082, src:"Windrunner Spire"},
+                        {s:"Legs", id:250014, src:"Tier Set"},
+                        {s:"Feet", id:250017, src:"The Catalyst"},
+                        {s:"Ring", id:251513, src:"Crafting"},
+                        {s:"2H Weapon", id:251162, src:"Maisara Caverns"},
+                        {s:"Trinket 1", id:249343, src:"Chimaerus"},
+                        {s:"Trinket 2", id:193701, src:"Algeth'ar Academy"}
+                    ]
+                }
+            }
+        },
+    };
+
+    function updateSpecOptions() {
+        const cls = document.getElementById('classSelect').value;
+        const specSel = document.getElementById('specSelect');
+        const display = document.getElementById('mainDisplay');
+        specSel.innerHTML = '<option value="">-- 전문화 선택 --</option>';
+        if (!cls) { display.innerHTML = '<div class="welcome-msg">왼쪽 패널에서 직업과 전문화를 선택해 주세요.</div>'; return; }
+        if (DATA_DB[cls]) { for (let key in DATA_DB[cls].specs) { specSel.innerHTML += `<option value="${key}">${DATA_DB[cls].specs[key]}</option>`; } }
+    }
+
+    function renderComparison() {
+        const cls = document.getElementById('classSelect').value;
+        const spec = document.getElementById('specSelect').value;
+        const display = document.getElementById('mainDisplay');
+        if (!cls || !spec) return;
+
+        const specData = DATA_DB[cls].items[spec];
+        if (!specData) return;
+
+        display.innerHTML = `<h2> BiS 리스트 (Wowhead)</h2><table><thead><tr><th style="width:100px;">부위</th><th>아이템 명칭 / 링크</th><th>추천 획득처</th></tr></thead><tbody id="comparisonBody"></tbody></table>`;
+        const tbody = document.getElementById('comparisonBody');
+        const whList = [...(specData.wh || [])];
+        
+        SLOT_TEMPLATE.forEach(slot => {
+            const wh = whList.find(item => slot.synonyms.includes(item.s)) || {s:"-", id:"", src:"-"};
+            if(wh.id) whList.splice(whList.indexOf(wh), 1);
+
+            // 제작 아이템 판별 로직 및 ilvl 285 적용
+            const srcStr = (wh.src || "").toLowerCase();
+            const isCrafted = srcStr.includes("craft") || srcStr.includes("tailoring") || srcStr.includes("blacksmithing") || srcStr.includes("leatherworking") || srcStr.includes("jewelcrafting") || srcStr.includes("inscription");
+            const ilvl = isCrafted ? 285 : 289;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="color:#aaa; font-weight:bold; background:#1a1a1a;">${slot.label}</td>
+                <td>${wh.id ? `<a href="https://www.wowhead.com/ko/item=${wh.id}&ilvl=${ilvl}" data-wowhead="item=${wh.id}">...</a> ${isCrafted ? '<br><span class="crafted-tag">[제작 아이템 - 285 레벨]</span>' : ''}` : '-'}</td>
+                <td style="color:#888;">${wh.src}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        if(window.$WowheadPower) $WowheadPower.refreshLinks();
+    }
+
+    function calculate() {
+        const N = parseInt(document.getElementById('total').value);    // 전체 드랍 아이템 수
+        const K = parseInt(document.getElementById('target').value);   // 원하는 아이템 수
+        const n = parseInt(document.getElementById('dice').value);     // 던지는 주사위 수 (샘플 수)
+
+        // 유효성 검사
+        if (!N || N < 1) return alert("전체 드랍 아이템 수(N)를 입력하세요.");
+        if (!K || K < 1) return alert("원하는 아이템 수를 입력하세요.");
+        if (K > N) return alert("원하는 템 수가 전체 드랍 수(N)보다 많을 수 없습니다.");
+        if (n < 1 || n > 3) return alert("주사위는 1~3개까지만 가능합니다.");
+        if (n > N) return alert("주사위 수가 전체 드랍 수보다 클 수 없습니다.");
+
+        // 조합(Combination) 계산 함수: nCr
+        function combination(n, r) {
+            if (r < 0 || r > n) return 0;
+            if (r === 0 || r === n) return 1;
+            if (r > n / 2) r = n - r;
+            let res = 1;
+            for (let i = 1; i <= r; i++) {
+                res = res * (n - i + 1) / i;
+            }
+            return res;
+        }
+
+        // 초기하분포 확률 계산 함수 (HYPGEOM.DIST 로직)
+        // P(X = k) = (K C k) * (N-K C n-k) / (N C n)
+        function getHypgeom(k) {
+            const numerator = combination(K, k) * combination(N - K, n - k);
+            const denominator = combination(N, n);
+            return numerator / denominator;
+        }
+
+        // 각 케이스별 확률 계산
+        const prob0 = getHypgeom(0); // 0개 당첨 (전부 꽝)
+        const prob1 = getHypgeom(1); // 정확히 1개 당첨
+        const prob2 = (n >= 2) ? getHypgeom(2) : 0; // 정확히 2개 당첨
+        const prob3 = (n >= 3) ? getHypgeom(3) : 0; // 정확히 3개 당첨
+        
+        const atLeastOne = (1 - prob0) * 100; // 적어도 1개 당첨 확률
+
+        // 결과 출력
+        let resultHTML = `<div class="res-box" style="text-align:left; font-size:0.85em; line-height:1.8;">`;
+        resultHTML += `<b style="color:#f8b700; font-size:1.1em;">[비복원 분석: 주사위 ${n}개 / 목표 ${K}개]</b><br>`;
+        resultHTML += `<span style="color:#00ff00; font-size:1.1em;">• 적어도 1개 당첨: ${atLeastOne.toFixed(2)}%</span><br>`;
+        resultHTML += `<hr style="border:0.1px solid #333; margin:8px 0;">`;
+        
+        resultHTML += `• 1개는 당첨될 확률: ${(prob1 * 100).toFixed(2)}%<br>`;
+        
+        if (n >= 2) {
+            resultHTML += `• 2개 다 당첨될 확률: ${(prob2 * 100).toFixed(2)}%<br>`;
+        }
+        if (n === 3) {
+            resultHTML += `• 3개 다 대박일 확률: ${(prob3 * 100).toFixed(2)}%<br>`;
+        }
+
+        resultHTML += `</div>`;
+        document.getElementById('calcResult').innerHTML = resultHTML;
+    }
+</script>
+</body>
+</html>
