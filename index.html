@@ -21,37 +21,60 @@
         .crafted-tag { color: #3498db; font-size: 0.8em; font-weight: bold; }
         .welcome-msg { text-align: center; color: #666; font-size: 1.4em; margin-top: 200px; }
     /* 화면 너비가 768px 이하일 때 적용 (모바일/태블릿) */
-@media (max-width: 768px) {
+    @media (max-width: 768px) {
     body {
-        flex-direction: column; /* 가로 배열을 세로 배열로 변경 */
-        overflow-y: auto;       /* 전체 스크롤 허용 */
+        flex-direction: column;
+        height: auto;
+        overflow-y: visible;
     }
 
     .sidebar {
-        width: 100%;            /* 사이드바 너비를 꽉 차게 */
-        height: auto;           /* 높이를 콘텐츠에 맞게 */
-        border-right: none;
-        border-bottom: 1px solid #222;
+        width: 100%;
         padding: 15px;
-        box-sizing: border-box;
+        border-right: none;
+        order: 1; /* 사이드바를 최상단으로 */
+    }
+
+    /* 외부 링크 버튼을 상단으로 올리기 위해 순서 조정 */
+    .sidebar > div:last-child {
+        order: -1; /* 맨 아래 있던 링크와 주의사항을 사이드바 내에서 맨 위로 */
+        margin-bottom: 15px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .card {
+        padding: 12px;
+        margin-bottom: 15px;
     }
 
     .main {
         width: 100%;
         padding: 15px;
-        box-sizing: border-box;
+        order: 2; /* BiS 리스트는 계산기 아래에 배치 */
     }
 
-    /* 테이블이 화면 밖으로 나가지 않도록 가로 스크롤 허용 */
+    /* 테이블 가로 스크롤 강화 */
     table {
         display: block;
+        width: 100%;
         overflow-x: auto;
+        -webkit-overflow-scrolling: touch; /* 아이폰 스크롤 부드럽게 */
+    }
+
+    th, td {
+        min-width: 100px; /* 열이 너무 찌그러지지 않게 */
         white-space: nowrap;
     }
 
     .welcome-msg {
-        margin-top: 50px;       /* 모바일에서는 메시지 위치 조정 */
+        margin-top: 30px;
+        font-size: 1.1em;
     }
+    
+    /* 폰트 크기 모바일 대응 */
+    h2 { font-size: 1.1em; }
+    .btn { padding: 12px; font-size: 1em; }
 }
     </style>
 </head>
@@ -620,16 +643,41 @@
                 },
                 "demonology": {
                     wh: [
+                        {s:"Weapon", id:249283, src:"Belo'ren"},
+                        {s:"Off-Hand", id:249276, src:"Vorasius"},
                         {s:"Head", id:250042, src:"Tier Set"},
-                        {s:"Weapon", id:258047, src:"Skyreach"},
-                        {s:"Boots", id:249373, src:"Chimaerus"},
-                        {s:"Ring 2", id:249336, src:"Vorasius"}
+                        {s:"Neck", id:249368, src:"Crown of the Cosmos"},
+                        {s:"Shoulders", id:251085, src:"Windrunner Spire"},
+                        {s:"Cloak", id:239656, src:"Crafting"},
+                        {s:"Chest", id:250045, src:"Tier Set"},
+                        {s:"Wrist", id:239648, src:"Crafted"},
+                        {s:"Gloves", id:250043, src:"Tier Set"},
+                        {s:"Belt", id:249376, src:"Belo'ren"},
+                        {s:"Legs", id:250041, src:"Tier Set"},
+                        {s:"Boots", id:249305, src:"Vaelgor"},
+                        {s:"Ring 1", id:249920, src:"Midnight Falls"},
+                        {s:"Ring 2", id:251217, src:"Nexus Point Xenas"},
+                        {s:"Trinket 1", id:250144, src:"Windrunner Spire"},
+                        {s:"Trinket 2", id:249809, src:"Crown of the Cosmos"}
                     ]
                 },
                 "destruction": {
                     wh: [
-                        {s:"Head", id:250042, src:"Tier Set"},
                         {s:"Weapon", id:249283, src:"Belo'ren"},
+                        {s:"Off-Hand", id:249276, src:"Vorasius"},
+                        {s:"Head", id:250042, src:"Tier Set"},
+                        {s:"Neck", id:249368, src:"Crown of the Cosmos"},
+                        {s:"Shoulders", id:251085, src:"Windrunner Spire"},
+                        {s:"Cloak", id:239656, src:"Crafting"},
+                        {s:"Chest", id:250045, src:"Tier Set"},
+                        {s:"Wrist", id:239648, src:"Crafted"},
+                        {s:"Gloves", id:250043, src:"Tier Set"},
+                        {s:"Belt", id:249376, src:"Belo'ren"},
+                        {s:"Legs", id:250041, src:"Tier Set"},
+                        {s:"Boots", id:249305, src:"Vaelgor"},
+                        {s:"Ring 1", id:249920, src:"Midnight Falls"},
+                        {s:"Ring 2", id:251217, src:"Nexus Point Xenas"},
+                        {s:"Trinket 1", id:249343, src:"Chimaerus"},
                         {s:"Trinket 2", id:249346, src:"Vaelgor"}
                     ]
                 }
